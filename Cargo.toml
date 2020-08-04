@@ -1,0 +1,23 @@
+[package]
+name = "noria-server"
+version = "0.1.0"
+authors = ["JusungLee0601 <jusunglee0601@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tungstenite = "0.11.0"
+serde = "^1.0.59"
+serde_derive = "^1.0.59"
+serde_json = "1.0"
+futures = { version = "0.3", default-features = false }
+uuid = { version = "0.4", features = ["serde", "v4"] }
+log = "0.4.0"
+env_logger = "0.7.1"
+js-sys = "0.3.40"
+petgraph = "0.5.1"
+
+[dependencies.wasm-bindgen]
+version = "^0.2"
+features = ["serde-serialize"]
