@@ -5,6 +5,7 @@ use crate::operators::Operator;
 use std::collections::HashMap;
 use crate::types::datatype::DataType;
 use crate::units::row::Row;
+use crate::types::changetype::ChangeType;
 
 fn return_hash_v() -> HashMap<DataType, Row> {
     HashMap::new()

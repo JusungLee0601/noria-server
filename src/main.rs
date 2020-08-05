@@ -16,7 +16,7 @@ pub mod types;
 pub mod units;
 pub mod viewsandgraphs;
 
-fn build_graph() -> DataFlowGraph {
+fn build_graph(){
     //simple article votecount table
     let graph_json = r##"{
         "operators": [
@@ -39,7 +39,7 @@ fn build_graph() -> DataFlowGraph {
             "childindex": 1
         }],
         "path_map": {
-            
+
         } 
     }"##;
 
@@ -53,9 +53,12 @@ fn main() {
 
     for stream in server.incoming() {
         spawn(move || {
+            let mut string = "";
+
             let callback = |req: &Request, mut response: Response| {
                 println!("Received a new ws handshake");
                 println!("The request's path is: {}", req.uri().path());
+                string = req.uri().path();
 
                 println!("The request's headers are:");
                 for (ref header, _value) in req.headers() {

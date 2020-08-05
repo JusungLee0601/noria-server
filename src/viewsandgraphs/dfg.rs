@@ -19,7 +19,6 @@ use crate::operators::operation::Operation::Leafor;
 //DataFlowGraph
 //root_id_map: map of root_id's to their NodeIndexes
 //leaf_id_vec: just a list of leaf ids, used for printing
-#[wasm_bindgen]
 #[derive(Debug)]
 pub struct DataFlowGraph {
     pub(crate) data: Graph<RefCell<Operation>, ()>,
@@ -66,7 +65,6 @@ impl DataFlowGraph {
 }
 
 //DFG Functions, exposed
-#[wasm_bindgen]
 impl DataFlowGraph { 
     /// Returns DFG from JSON input
     pub fn new(json: String) -> DataFlowGraph {

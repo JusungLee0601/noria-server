@@ -3,15 +3,22 @@ use crate::units::row::Row;
 use crate::units::serverchange::ServerChange;
 use crate::viewsandgraphs::dfg::DataFlowGraph;
 use crate::viewsandgraphs::view::View;
+use crate::types::changetype::ChangeType;
+use crate::types::datatype::DataType;
 use petgraph::graph::NodeIndex;
 use crate::operators::Operator;
 use tungstenite::protocol::WebSocket;
+use std::collections::HashMap;
+use tungstenite::Message;
+use tungstenite::stream::Stream;
+use std::io::Read;
+use std::cell::{RefCell};
 
 fn return_hash_v() -> HashMap<DataType, Row> {
     HashMap::new()
 }
 
-fn return_vec_v() -> Vec<&WebSocket> {
+fn return_vec_v<T>() -> Vec<T> {
     Vec::new()
 }
 
@@ -19,16 +26,16 @@ fn return_vec_v() -> Vec<&WebSocket> {
 //stored view is what is "accessed" by JS
 #[derive(Debug, Clone)]
 #[derive(Serialize, Deserialize)]
-pub struct Leaf {
+pub struct Leaf<R: Read> {
     #[serde(default = "return_hash_v")]
     pub(crate) table: HashMap<DataType, Row>,
     root_pair_id: String,
     #[serde(default = "return_vec_v")]
-    sockets: Vec<&WebSocket>,
+    sockets: Vec<RefCell<WebSocket<Stream<R, R>>>>,
 }
 
 //Operator Trait for Leaf
-impl Operator for Leaf {
+impl Operator for Leaf<Read> {
     ///Apply doesn't actually modify Change, inserts into mat_view table, returns unchanged input
     fn apply(&mut self, prev_change_vec: Vec<Change>) -> Vec<Change> {
         for change in &prev_change_vec {
@@ -62,8 +69,8 @@ impl Operator for Leaf {
     }
 }
 
-impl Leaf {
-    pub fn initial_connect(&mut self, ws: &WebSocket) {
+impl Leaf<Read> {
+    pub fn initial_connect(&mut self, ws: &WebSocket<Stream<Read, Read>>) {
         //handle ended connection, remove websocket from vec
         let mut batch = Vec::new();
 

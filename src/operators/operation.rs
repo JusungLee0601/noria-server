@@ -8,6 +8,7 @@ use crate::units::change::Change;
 use petgraph::graph::NodeIndex;
 use crate::operators::Operator;
 use crate::viewsandgraphs::dfg::DataFlowGraph;
+use std::io::Read;
 
 //Operation Enum, used for typing
 //I think this was originally for exposing operators to JS, but now that operator stuff is handled
@@ -20,7 +21,7 @@ pub enum Operation {
     Projector(Projection),
     Aggregator(Aggregation),
     Rootor(Root),
-    Leafor(Leaf),
+    Leafor(Leaf<Read>),
     InnerJoinor(InnerJoin),
 }
 
