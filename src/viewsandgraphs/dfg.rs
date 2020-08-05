@@ -26,7 +26,6 @@ pub struct DataFlowGraph {
     root_id_map: HashMap<String, NodeIndex>,
     leaf_id_vec: Vec<NodeIndex>,
     path_subgraph_map: HashMap<String, String>,
-    ws_leaf_indices_map: HashMap<String, Vec<NodeIndex>>,
 }
 
 //Displays DFG
@@ -118,7 +117,9 @@ impl DataFlowGraph {
             data.add_edge(pni, cni, {});
         } 
 
-        DataFlowGraph { data, root_id_map, leaf_id_vec }
+        let path_subgraph_map: HashMap<String, String> = serde_json::from_value(obj["path_map"].clone()).unwrap();
+
+        DataFlowGraph { data, root_id_map, leaf_id_vec, path_subgraph_map }
     }
 
     /// Applies inserts and deletions sent to a specified Root, propogates them

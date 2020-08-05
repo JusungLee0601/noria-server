@@ -16,8 +16,8 @@ fn return_hash_v() -> HashMap<DataType, Row> {
 #[derive(Serialize, Deserialize)]
 pub struct Root {
     pub(crate) root_id: String,
-    #[serde(default = "return_hash_v")]
     key_index: usize, 
+    #[serde(default = "return_hash_v")]
     pub(crate) table: HashMap<DataType, Row>,
     
 }
