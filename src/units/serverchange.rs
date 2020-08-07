@@ -12,7 +12,7 @@ pub struct ServerChange {
 //Change functions
 impl ServerChange {
     //constructor
-    pub fn new(root_id: String, batch: Vec<Change>) -> Change {
-        Change { root_id, batch }
+    pub fn new(root_id: String, changes: Vec<Change>) -> ServerChange {
+        ServerChange { root_id, changes }
     }
 }

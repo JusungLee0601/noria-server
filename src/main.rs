@@ -16,35 +16,14 @@ pub mod types;
 pub mod units;
 pub mod viewsandgraphs;
 
-fn build_graph(){
-    //simple article votecount table
-    let graph_json = r##"{
-        "operators": [
-                {
-                    "t": "Rootor",
-                    "c": {
-                        "root_id": "TestServerRoot",
-                        "key_index": 0
-                    }
-                },
-                {
-                    "t": "Leafor",
-                    "c": {
-                        "root_pair_id":"TestClientRoot"
-                    }
-                }
-            ],
-        "edges": [{
-            "parentindex": 0,
-            "childindex": 1
-        }],
-        "path_map": {
+// SOME NOTES
 
-        } 
-    }"##;
+// Some key differences between the server vs clientside graph. First, because the serde was for
+// sending graphs to the clientside graphs, we technically don't need to be able to string convert
+// for serverside structures. It's also impossible to do because you can't serialize and clone
+// the Websocket connection. Instead, I'll have to manually build the petgraphs, which isn't too 
+// difficult. 
 
-    graph_json.to_string()
-}
 
 fn main() {
     println!("creating websocket");
@@ -53,12 +32,12 @@ fn main() {
 
     for stream in server.incoming() {
         spawn(move || {
-            let mut string = "";
+            let mut strings: Vec<String> = Vec::new();
 
             let callback = |req: &Request, mut response: Response| {
                 println!("Received a new ws handshake");
                 println!("The request's path is: {}", req.uri().path());
-                string = req.uri().path();
+                strings.push(req.uri().path().to_string().clone());
 
                 println!("The request's headers are:");
                 for (ref header, _value) in req.headers() {
@@ -74,6 +53,8 @@ fn main() {
             };
 
             let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
+
+            println!("{}", strings[0]);
 
             //writes initial graph 
             let graph = r##"{
@@ -134,7 +115,7 @@ fn main() {
 
             let graph_msg = Message::text(graph);
             websocket.write_message(graph_msg).unwrap();
-            println!("Sending intial graph");
+            println!("Sending initial graph");
             
             loop {
                 let msg = websocket.read_message().unwrap();

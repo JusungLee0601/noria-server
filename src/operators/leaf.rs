@@ -11,6 +11,7 @@ use tungstenite::protocol::WebSocket;
 use std::collections::HashMap;
 use tungstenite::Message;
 use tungstenite::stream::Stream;
+use std::net::TcpStream;
 use std::io::Read;
 use std::cell::{RefCell};
 
@@ -18,24 +19,22 @@ fn return_hash_v() -> HashMap<DataType, Row> {
     HashMap::new()
 }
 
-fn return_vec_v<T>() -> Vec<T> {
+fn return_vec_v() -> Vec<WebSocket<TcpStream>> {
     Vec::new()
 }
 
 //Leaf Operator
 //stored view is what is "accessed" by JS
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
-pub struct Leaf<R: Read> {
-    #[serde(default = "return_hash_v")]
+#[derive(Debug)]
+pub struct Leaf {
     pub(crate) table: HashMap<DataType, Row>,
+    sockets: Vec<WebSocket<TcpStream>>,
     root_pair_id: String,
-    #[serde(default = "return_vec_v")]
-    sockets: Vec<RefCell<WebSocket<Stream<R, R>>>>,
+    key_index: usize,
 }
 
 //Operator Trait for Leaf
-impl Operator for Leaf<Read> {
+impl Operator for Leaf {
     ///Apply doesn't actually modify Change, inserts into mat_view table, returns unchanged input
     fn apply(&mut self, prev_change_vec: Vec<Change>) -> Vec<Change> {
         for change in &prev_change_vec {
@@ -58,31 +57,43 @@ impl Operator for Leaf<Read> {
 
     /// Doesn't apply to the rest of the operators as it is the Leaf
     fn process_change(&mut self, change: Vec<Change>, _dfg: &DataFlowGraph, _parent_index: NodeIndex, _self_index: NodeIndex) { 
-        self.apply(change);
+        self.apply(change.clone());  
 
-        let server_change = ServerChange::new(self.root_pair_id, change);
-        let msg = Message::text(server_change.to_string());
+        let server_change = ServerChange::new(self.root_pair_id.clone(), change);
 
-        for ws in &self.sockets {
+        for n in 0..self.sockets.len() {
+            let msg = Message::text(serde_json::to_string(&server_change.clone()).unwrap());
+            let ws = self.get_ws(n);
             ws.write_message(msg).unwrap();
         }
     }
 }
 
-impl Leaf<Read> {
-    pub fn initial_connect(&mut self, ws: &WebSocket<Stream<Read, Read>>) {
+impl Leaf {
+    pub fn new(root_pair_id: String, key_index: usize) -> Leaf {
+        let table = HashMap::new();
+        let sockets = Vec::new();
+
+        Leaf { table, sockets, root_pair_id, key_index }
+    }
+
+    pub fn initial_connect(&mut self, mut ws: WebSocket<TcpStream>) {
         //handle ended connection, remove websocket from vec
         let mut batch = Vec::new();
 
         for (key, val) in &self.table {
-            batch.push(val);
+            batch.push(val.clone());
         }
 
         let initial_change = Change::new(ChangeType::Insertion, batch);
-        let init_sc = ServerChange::new(self.root_pair_id, vec![initial_change]);
+        let init_sc = ServerChange::new(self.root_pair_id.clone(), vec![initial_change]);
 
-        let msg = Message::text(init_sc.to_string());
+        let msg = Message::text(serde_json::to_string(&init_sc).unwrap());
         ws.write_message(msg).unwrap();
         self.sockets.push(ws);
+    }
+
+    pub fn get_ws(&mut self, index: usize) -> &mut WebSocket<TcpStream> {
+        self.sockets.get_mut(index).unwrap()
     }
 }

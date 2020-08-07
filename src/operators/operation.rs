@@ -13,15 +13,13 @@ use std::io::Read;
 //Operation Enum, used for typing
 //I think this was originally for exposing operators to JS, but now that operator stuff is handled
 //Rust side I'm not sure if this still needs to exist, I can give it a try to switch
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "t", content = "c")]
+#[derive(Debug)]
 pub enum Operation {
     Selector(Selection),
     Projector(Projection),
     Aggregator(Aggregation),
     Rootor(Root),
-    Leafor(Leaf<Read>),
+    Leafor(Leaf),
     InnerJoinor(InnerJoin),
 }
 
