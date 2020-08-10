@@ -118,6 +118,10 @@ impl DataFlowGraph {
         self.data.add_edge(pni, cni, {});
     }
 
+    pub fn add_path(&mut self, path: String, subgraph: String) {
+        self.path_subgraph_map.insert(path, subgraph);
+    }
+
     pub fn read(&self, leaf_index: usize, key_string: String) -> String {
         let mut leaf_op = self.data.node_weight(NodeIndex::new(leaf_index)).unwrap().borrow_mut();
         let key: DataType = serde_json::from_str(&key_string).unwrap();

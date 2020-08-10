@@ -16,6 +16,9 @@ pub mod types;
 pub mod units;
 pub mod viewsandgraphs;
 
+use crate::types::operatortype::{A, I, L, P, R, S};
+
+
 // SOME NOTES
 
 // Some key differences between the server vs clientside graph. First, because the serde was for
@@ -25,7 +28,87 @@ pub mod viewsandgraphs;
 // difficult. 
 
 
+
+fn build_server_graph() -> DataFlowGraph {
+    let mut graph = DataFlowGraph::new();
+
+    let mut latency_test_subgraph = r##"{
+        "operators": [
+                {
+                    "t": "Rootor",
+                    "c": {
+                        "root_id": "JoinLeft"
+                    }
+                },
+                {
+                    "t": "Rootor",
+                    "c": {
+                        "root_id": "JoinRight"
+                    }
+                },
+                {
+                    "t": "InnerJoinor",
+                    "c": {
+                        "parent_ids": [0, 1],
+                        "join_cols": [1, 0]
+                    }
+                },
+                {
+                    "t": "Leafor",
+                    "c": {
+                        "mat_view": {
+                            "name": "Users and VoteCounts",
+                            "column_names": ["AuthorUserID", "StoryID", "StoryVoteCount"],
+                            "schema": ["Int", "Int", "Int"],
+                            "key_index": 1
+                        }
+                    }
+                }
+            ],
+        "edges": [{
+            "parentindex": 0,
+            "childindex": 2
+        }, {
+            "parentindex": 1,
+            "childindex": 2
+        },
+        {
+            "parentindex": 2,
+            "childindex": 3
+        }]
+    }"##;
+
+    graph.add_path("/latencytest".to_owned(), latency_test_subgraph.to_owned());
+    graph.add_path("/latencytestdummy".to_owned(), "".to_owned());
+
+    let stories_root = r##"{
+        "root_id": "Stories",
+        "key_index": 1
+    }"##;
+    let votes_root = r##"{
+        "root_id": "Votes",
+        "key_index": 2
+    }"##;
+    let aggregator = r##"{
+        "group_by_col": [0]
+    }"##;
+
+    graph.add_node(OperatorType::R, stories_root.to_owned());
+    graph.add_node(OperatorType::R, votes_root.to_owned());
+    graph.add_node(OperatorType::A, aggregator.to_owned());
+    graph.add_leaf("JoinLeft".to_owned(), 1);
+    graph.add_leaf("JoinRight".to_owned(), 0);
+
+    graph.add_edge(0, 3);
+    graph.add_edge(1, 2);
+    graph.add_edge(2, 4);
+
+    graph
+}
+
 fn main() {
+    let mut graph = build_server_graph();
+
     println!("creating websocket");
     env_logger::init();
     let server = TcpListener::bind("127.0.0.1:3012").unwrap();
@@ -54,66 +137,11 @@ fn main() {
 
             let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
 
+            let client_subgraph = graph.path_subgraph_map.get(strings[0]).unwrap();
+
             println!("{}", strings[0]);
 
-            //writes initial graph 
-            let graph = r##"{
-                "operators": [
-                        {
-                            "t": "Rootor",
-                            "c": {
-                                "root_id": "AuthorStory"
-                            }
-                        },
-                        {
-                            "t": "Rootor",
-                            "c": {
-                                "root_id": "StoryVoter"
-                            }
-                        },
-                        {
-                            "t": "Aggregator",
-                            "c": {
-                                "group_by_col": [0]
-                            }
-                        },
-                        {
-                            "t": "InnerJoinor",
-                            "c": {
-                                "parent_ids": [0, 1],
-                                "join_cols": [1, 0]
-                            }
-                        },
-                        {
-                            "t": "Leafor",
-                            "c": {
-                                "mat_view": {
-                                    "name": "Users and VoteCounts",
-                                    "column_names": ["AuthorUserID", "StoryID", "StoryVoteCount"],
-                                    "schema": ["Int", "Int", "Int"],
-                                    "key_index": 1
-                                }
-                            }
-                        }
-                    ],
-                "edges": [{
-                    "parentindex": 0,
-                    "childindex": 3
-                }, {
-                    "parentindex": 1,
-                    "childindex": 2
-                },
-                {
-                    "parentindex": 2,
-                    "childindex": 3
-                },
-                {
-                    "parentindex": 3,
-                    "childindex": 4
-                }]
-            }"##;
-
-            let graph_msg = Message::text(graph);
+            let graph_msg = Message::text(client_subgraph);
             websocket.write_message(graph_msg).unwrap();
             println!("Sending initial graph");
             
