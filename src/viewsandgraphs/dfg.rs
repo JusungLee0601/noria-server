@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 use std::cell::{RefCell};
 use petgraph::graph::Graph;
 use serde_json::Value;
+use std::sync::RwLock;
 
 use petgraph::graph::NodeIndex;
 use crate::operators::Operator;
@@ -33,17 +34,17 @@ use crate::operators::projection::Projection;
 //leaf_id_vec: just a list of leaf ids, used for printing
 #[derive(Debug)]
 pub struct DataFlowGraph {
-    pub(crate) data: Graph<RefCell<Operation>, ()>,
+    pub(crate) data: Graph<RwLock<Operation>, ()>,
     root_id_map: HashMap<String, NodeIndex>,
     leaf_id_vec: Vec<NodeIndex>,
-    path_subgraph_map: HashMap<String, String>,
+    pub(crate) path_subgraph_map: HashMap<String, String>,
 }
 
 //Displays DFG
 impl fmt::Display for DataFlowGraph {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for leaf_index in self.leaf_id_vec.clone() {
-            let op_ref = self.data.node_weight(leaf_index).unwrap().borrow_mut();
+            let op_ref = self.data.node_weight(leaf_index).unwrap().write().unwrap();
 
             match &*op_ref {
                 Operation::Leafor(leaf) => write!(f, "{:#?}", leaf.table),
@@ -70,36 +71,43 @@ impl DataFlowGraph {
         let change: Change = serde_json::from_str(&row_chng_json).unwrap();
 
         let root_node_index = *(self.root_id_map.get(&root_string).unwrap());
-        let mut root_op = self.data.node_weight(root_node_index.clone()).unwrap().borrow_mut();
+        let mut root_op = self.data.node_weight(root_node_index.clone()).unwrap().write().unwrap();
 
         let change_vec = vec![change];
 
         root_op.process_change(change_vec, self, NodeIndex::new(1), root_node_index.clone());
     }
 
+    pub fn change_to_root(&self, root_string: String, chng_vec: Vec<Change>) {
+        let root_node_index = *(self.root_id_map.get(&root_string).unwrap());
+        let mut root_op = self.data.node_weight(root_node_index.clone()).unwrap().write().unwrap();
+
+        root_op.process_change(chng_vec, self, NodeIndex::new(1), root_node_index.clone());
+    }
+
     pub fn add_node(&mut self, op_type: OperatorType, json: String) {
         match op_type {
             OperatorType::A => {
                 let op: Aggregation = serde_json::from_str(&json).unwrap();
-                let index = self.data.add_node(RefCell::new(Aggregator(op)));
+                let index = self.data.add_node(RwLock::new(Aggregator(op)));
             }
             OperatorType::I => {
                 let op: InnerJoin = serde_json::from_str(&json).unwrap();
-                let index = self.data.add_node(RefCell::new(InnerJoinor(op)));
+                let index = self.data.add_node(RwLock::new(InnerJoinor(op)));
             }
             OperatorType::P => {
                 let op: Projection = serde_json::from_str(&json).unwrap();
-                let index = self.data.add_node(RefCell::new(Projector(op)));
+                let index = self.data.add_node(RwLock::new(Projector(op)));
             }
             OperatorType::S => {
                 let op: Selection = serde_json::from_str(&json).unwrap();
-                let index = self.data.add_node(RefCell::new(Selector(op)));
+                let index = self.data.add_node(RwLock::new(Selector(op)));
             }
             OperatorType::R => {
                 let op: Root = serde_json::from_str(&json).unwrap();
                 let ri = op.root_id.clone();
 
-                let index = self.data.add_node(RefCell::new(Rootor(op)));
+                let index = self.data.add_node(RwLock::new(Rootor(op)));
                 self.root_id_map.insert(ri, index);
             },
             _ => {},
@@ -108,7 +116,7 @@ impl DataFlowGraph {
 
     pub fn add_leaf(&mut self, root_pair_id: String, key_index: usize) {
         let leaf = Leaf::new(root_pair_id, key_index);
-        let index = self.data.add_node(RefCell::new(Leafor(leaf)));
+        let index = self.data.add_node(RwLock::new(Leafor(leaf)));
         self.leaf_id_vec.push(index); 
     }
 
@@ -123,7 +131,7 @@ impl DataFlowGraph {
     }
 
     pub fn read(&self, leaf_index: usize, key_string: String) -> String {
-        let mut leaf_op = self.data.node_weight(NodeIndex::new(leaf_index)).unwrap().borrow_mut();
+        let mut leaf_op = self.data.node_weight(NodeIndex::new(leaf_index)).unwrap().write().unwrap();
         let key: DataType = serde_json::from_str(&key_string).unwrap();
 
         match &*leaf_op {
@@ -156,7 +164,7 @@ impl DataFlowGraph {
         let mut node_vec = Vec::new();
 
         for index in &self.leaf_id_vec {
-            let leaf_ref = self.data.node_weight(*index).unwrap().borrow_mut();
+            let leaf_ref = self.data.node_weight(*index).unwrap().write().unwrap();
 
             match &*leaf_ref {
                 Leafor(leaf) => node_vec.push(leaf.table.len()),

@@ -6,8 +6,10 @@ extern crate serde_derive;
 use std::net::TcpListener;
 use std::thread::spawn;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use tungstenite::Message;
+use tungstenite::Message::Text;
 use tungstenite::accept_hdr;
 use tungstenite::handshake::server::{Request, Response};
 
@@ -16,7 +18,10 @@ pub mod types;
 pub mod units;
 pub mod viewsandgraphs;
 
-use crate::types::operatortype::{A, I, L, P, R, S};
+use crate::types::operatortype::OperatorType;
+use crate::types::operatortype::OperatorType::{A, I, L, P, R, S};
+use crate::viewsandgraphs::dfg::DataFlowGraph;
+use crate::units::serverchange::ServerChange;
 
 
 // SOME NOTES
@@ -107,7 +112,7 @@ fn build_server_graph() -> DataFlowGraph {
 }
 
 fn main() {
-    let mut graph = build_server_graph();
+    let graph = Arc::new(Mutex::new(build_server_graph()));
 
     println!("creating websocket");
     env_logger::init();
@@ -135,9 +140,12 @@ fn main() {
                 Ok(response)
             };
 
+            let graph_ref = graph.clone();
+            let mut g = graph_ref.lock().unwrap();
+
             let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
 
-            let client_subgraph = graph.path_subgraph_map.get(strings[0]).unwrap();
+            let client_subgraph = g.path_subgraph_map.get(&strings[0]).unwrap();
 
             println!("{}", strings[0]);
 
@@ -148,7 +156,10 @@ fn main() {
             loop {
                 let msg = websocket.read_message().unwrap();
                 if msg.is_binary() || msg.is_text() {
-                    websocket.write_message(msg).unwrap();
+                    if let Text(inner_json) = msg {
+                        let sc: ServerChange = serde_json::from_str(&inner_json).unwrap();
+                        g.change_to_root(sc.root_id, sc.changes);
+                    }
                 }
             }
         });

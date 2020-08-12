@@ -37,7 +37,7 @@ impl Operator for InnerJoin {
 
         for child_index in neighbors_iterator {
             let child_cell = (*graph).node_weight(child_index).unwrap();
-            let mut child_ref_mut = child_cell.borrow_mut();
+            let mut child_ref_mut = child_cell.write().unwrap();
 
             //the self become parent, child becomes self
             (*child_ref_mut).process_change(next_change.clone(), dfg, self_index, child_index);
