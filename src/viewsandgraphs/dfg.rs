@@ -38,6 +38,7 @@ pub struct DataFlowGraph {
     root_id_map: HashMap<String, NodeIndex>,
     leaf_id_vec: Vec<NodeIndex>,
     pub(crate) path_subgraph_map: HashMap<String, String>,
+    pub(crate) path_leaf_map: HashMap<String, NodeIndex>,
 }
 
 //Displays DFG
@@ -62,9 +63,10 @@ impl DataFlowGraph {
         let mut data = Graph::new();
         let mut root_id_map = HashMap::new();
         let mut leaf_id_vec = Vec::new();
-        let mut path_subgraph_map = HashMap::new();   
+        let mut path_subgraph_map = HashMap::new(); 
+        let mut path_leaf_map = HashMap::new();   
 
-        DataFlowGraph { data, root_id_map, leaf_id_vec, path_subgraph_map }
+        DataFlowGraph { data, root_id_map, leaf_id_vec, path_subgraph_map, path_leaf_map }
     }
 
     pub fn change_to_root_json(&self, root_string: String, row_chng_json: String) {
@@ -114,9 +116,10 @@ impl DataFlowGraph {
         }
     }
 
-    pub fn add_leaf(&mut self, root_pair_id: String, key_index: usize) {
+    pub fn add_leaf(&mut self, root_pair_id: String, key_index: usize, path: String) {
         let leaf = Leaf::new(root_pair_id, key_index);
         let index = self.data.add_node(RwLock::new(Leafor(leaf)));
+        self.path_leaf_map.insert(path, index);
         self.leaf_id_vec.push(index); 
     }
 

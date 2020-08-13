@@ -28,8 +28,8 @@ fn return_vec_v() -> Vec<WebSocket<TcpStream>> {
 #[derive(Debug)]
 pub struct Leaf {
     pub(crate) table: HashMap<DataType, Row>,
-    sockets: Vec<WebSocket<TcpStream>>,
-    root_pair_id: String,
+    pub(crate) sockets: Vec<WebSocket<TcpStream>>,
+    pub(crate) root_pair_id: String,
     key_index: usize,
 }
 
@@ -67,17 +67,8 @@ impl Operator for Leaf {
             ws.write_message(msg).unwrap();
         }
     }
-}
 
-impl Leaf {
-    pub fn new(root_pair_id: String, key_index: usize) -> Leaf {
-        let table = HashMap::new();
-        let sockets = Vec::new();
-
-        Leaf { table, sockets, root_pair_id, key_index }
-    }
-
-    pub fn initial_connect(&mut self, mut ws: WebSocket<TcpStream>) {
+    fn initial_connect(&mut self, mut ws: WebSocket<TcpStream>) {
         //handle ended connection, remove websocket from vec
         let mut batch = Vec::new();
 
@@ -91,6 +82,15 @@ impl Leaf {
         let msg = Message::text(serde_json::to_string(&init_sc).unwrap());
         ws.write_message(msg).unwrap();
         self.sockets.push(ws);
+    }
+}
+
+impl Leaf {
+    pub fn new(root_pair_id: String, key_index: usize) -> Leaf {
+        let table = HashMap::new();
+        let sockets = Vec::new();
+
+        Leaf { table, sockets, root_pair_id, key_index }
     }
 
     pub fn get_ws(&mut self, index: usize) -> &mut WebSocket<TcpStream> {

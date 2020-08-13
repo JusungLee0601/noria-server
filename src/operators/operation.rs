@@ -9,6 +9,8 @@ use petgraph::graph::NodeIndex;
 use crate::operators::Operator;
 use crate::viewsandgraphs::dfg::DataFlowGraph;
 use std::io::Read;
+use tungstenite::protocol::WebSocket;
+use std::net::TcpStream;
 
 //Operation Enum, used for typing
 //I think this was originally for exposing operators to JS, but now that operator stuff is handled
@@ -44,6 +46,17 @@ impl Operator for Operation {
             Operation::Rootor(op) => op.process_change(change, dfg, parent_index, self_index),
             Operation::Leafor(op) => op.process_change(change, dfg, parent_index, self_index),
             Operation::InnerJoinor(op) => op.process_change(change, dfg, parent_index, self_index),
+        }
+    }
+
+    fn initial_connect(&mut self, mut ws: WebSocket<TcpStream>) { 
+        match self {
+            Operation::Selector(op) => op.initial_connect(ws),
+            Operation::Projector(op) => op.initial_connect(ws),
+            Operation::Aggregator(op) => op.initial_connect(ws),
+            Operation::Rootor(op) => op.initial_connect(ws),
+            Operation::Leafor(op) => op.initial_connect(ws),
+            Operation::InnerJoinor(op) => op.initial_connect(ws),
         }
     }
 }
