@@ -24,6 +24,7 @@ use crate::viewsandgraphs::dfg::DataFlowGraph;
 use crate::units::serverchange::ServerChange;
 use crate::operators::operation::Operation::Leafor;
 use crate::types::changetype::ChangeType;
+use crate::types::permissiontype::PermissionType;
 use crate::units::change::Change;
 
 
@@ -34,8 +35,6 @@ use crate::units::change::Change;
 // for serverside structures. It's also impossible to do because you can't serialize and clone
 // the Websocket connection. Instead, I'll have to manually build the petgraphs, which isn't too 
 // difficult. 
-
-
 
 fn build_server_graph() -> DataFlowGraph {
     let mut graph = DataFlowGraph::new();
@@ -115,6 +114,8 @@ fn build_server_graph() -> DataFlowGraph {
     graph.add_path("/latencytest".to_owned(), latency_test_subgraph.to_owned());
     graph.add_path("/latencytestdummy".to_owned(), "".to_owned());
     graph.add_path("/dummytest".to_owned(), dummy_test_subgraph.to_owned());
+    graph.add_permission("/dummytest".to_string(), PermissionType::Write);
+    graph.add_permission("/dummytestread".to_string(), PermissionType::Read);
 
     // let stories_root = r##"{
     //     "root_id": "Stories",
@@ -146,6 +147,8 @@ fn build_server_graph() -> DataFlowGraph {
     graph.add_node(OperatorType::R, stories_root.to_owned());
     graph.add_leaf("Only".to_owned(), 0, "/dummytest".to_string());
 
+    graph.add_edge(0, 1);
+
     graph
 }
 
@@ -161,13 +164,12 @@ fn main() {
 
         spawn( move || {
             let mut g = graph_ref.lock().unwrap();
-
-            let mut strings: Vec<String> = Vec::new();
+            let mut path: String = "".to_string();
 
             let callback = |req: &Request, mut response: Response| {
                 println!("Received a new ws handshake");
                 println!("The request's path is: {}", req.uri().path());
-                strings.push(req.uri().path().to_string().clone());
+                path = req.uri().path().to_string();
 
                 println!("The request's headers are:");
                 for (ref header, _value) in req.headers() {
@@ -184,47 +186,40 @@ fn main() {
 
             let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
 
-            let client_subgraph = g.path_subgraph_map.get(&strings[0]).unwrap();
-            let ws_leaf_ni = g.path_leaf_map.get(&strings[0]).unwrap();
+            let permission = g.path_permission_map.get(&path).unwrap();
 
-            let mut leaf_op = g.data.node_weight(*ws_leaf_ni).unwrap().write().unwrap();
+            println!("{}", path);
 
-            
-            // if let Leafor(leaf) = &*leaf_op {
-            //     let mut batch = Vec::new();
-
-            //     for (key, val) in &leaf.table {
-            //         batch.push(val.clone());
-            //     }
-        
-            //     let initial_change = Change::new(ChangeType::Insertion, batch);
-            //     let init_sc = ServerChange::new(leaf.root_pair_id.clone(), vec![initial_change]);
-        
-            //     let msg = Message::text(serde_json::to_string(&init_sc).unwrap());
-            //     websocket.write_message(msg).unwrap();
-            //     //leaf.sockets.push(websocket);
-            // }
-
-
-            leaf_op.initial_connect(websocket);
-
-            println!("{}", strings[0]);
-
-            let graph_msg = Message::text(client_subgraph);
-            websocket.write_message(graph_msg).unwrap();
-            println!("Sending initial graph");
-            
-            loop {
-                let msg = websocket.read_message().unwrap();
-                if msg.is_binary() || msg.is_text() {
-                    if let Text(inner_json) = msg {
-                        println!("message received");
-                        let sc: ServerChange = serde_json::from_str(&inner_json).unwrap();
-                        println!("message converted");
-                        g.change_to_root(sc.root_id, sc.changes);
-                        println!("root change");
+            match permission {
+                PermissionType::Write => {
+                    let client_subgraph = g.path_subgraph_map.get(&path).unwrap();
+                    let ws_leaf_ni = g.path_leaf_map.get(&path).unwrap();
+                    
+                    let graph_msg = Message::text(client_subgraph);
+                    websocket.write_message(graph_msg).unwrap();
+                    println!("Sending initial graph");
+    
+                    let mut leaf_op = g.data.node_weight(*ws_leaf_ni).unwrap().write().unwrap();
+    
+                    if let Leafor(leaf) = &mut*leaf_op {
+                        leaf.initial_connect(websocket);
                     }
-                }
+                },
+                PermissionType::Read => {
+                    loop {
+                        let msg = websocket.read_message().unwrap();
+                        if msg.is_binary() || msg.is_text() {
+                            if let Text(inner_json) = msg {
+                                println!("message received");
+                                let sc: ServerChange = serde_json::from_str(&inner_json).unwrap();
+                                println!("message converted");
+                                g.change_to_root(sc.root_id, sc.changes);
+                                println!("root change");
+                                println!("{}", g.render());
+                            }
+                        }
+                    }
+                },            
             }
         });
     }

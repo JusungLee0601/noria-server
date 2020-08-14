@@ -47,17 +47,21 @@ impl Operator for Root {
 
     /// For Root, process change does not "apply"/change the initial set of Changes as it is the Root
     fn process_change(&mut self, change: Vec<Change>, dfg: &DataFlowGraph, _parent_index: NodeIndex, self_index: NodeIndex) { 
+        println!("yo");
         self.apply(change.clone());
         
         let graph = &(*dfg).data;
         let neighbors_iterator = graph.neighbors(self_index); 
 
+        println!("12");
         for child_index in neighbors_iterator { 
+            println!("children");
             let child_cell = (*graph).node_weight(child_index).unwrap();
             let mut child_ref_mut = child_cell.write().unwrap();
  
             //the self become parent, child becomes self
-            (*child_ref_mut).process_change(change.clone(), dfg, self_index   , child_index);
+            (*child_ref_mut).process_change(change.clone(), dfg, self_index, child_index);
+            println!("leaf");
         }
     }
 }

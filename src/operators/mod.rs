@@ -31,6 +31,4 @@ pub trait Operator {
             child_ref_mut.process_change(next_change.clone(), dfg, self_index, child_index);
         }
     }
-
-    fn initial_connect(&mut self, mut ws: WebSocket<TcpStream>) {}
 }

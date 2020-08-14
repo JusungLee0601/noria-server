@@ -13,6 +13,7 @@ use crate::units::change::Change;
 use crate::types::datatype::DataType;
 use crate::types::changetype::ChangeType;
 use crate::types::operatortype::OperatorType;
+use crate::types::permissiontype::PermissionType;
 use crate::operators::operation::Operation;
 use crate::operators::operation::Operation::Aggregator;
 use crate::operators::operation::Operation::InnerJoinor;
@@ -39,6 +40,7 @@ pub struct DataFlowGraph {
     leaf_id_vec: Vec<NodeIndex>,
     pub(crate) path_subgraph_map: HashMap<String, String>,
     pub(crate) path_leaf_map: HashMap<String, NodeIndex>,
+    pub(crate) path_permission_map: HashMap<String, PermissionType>,
 }
 
 //Displays DFG
@@ -64,9 +66,10 @@ impl DataFlowGraph {
         let mut root_id_map = HashMap::new();
         let mut leaf_id_vec = Vec::new();
         let mut path_subgraph_map = HashMap::new(); 
-        let mut path_leaf_map = HashMap::new();   
+        let mut path_leaf_map = HashMap::new(); 
+        let mut path_permission_map = HashMap::new();   
 
-        DataFlowGraph { data, root_id_map, leaf_id_vec, path_subgraph_map, path_leaf_map }
+        DataFlowGraph { data, root_id_map, leaf_id_vec, path_subgraph_map, path_leaf_map, path_permission_map }
     }
 
     pub fn change_to_root_json(&self, root_string: String, row_chng_json: String) {
@@ -81,6 +84,7 @@ impl DataFlowGraph {
     }
 
     pub fn change_to_root(&self, root_string: String, chng_vec: Vec<Change>) {
+        println!("entered");
         let root_node_index = *(self.root_id_map.get(&root_string).unwrap());
         let mut root_op = self.data.node_weight(root_node_index.clone()).unwrap().write().unwrap();
 
@@ -131,6 +135,10 @@ impl DataFlowGraph {
 
     pub fn add_path(&mut self, path: String, subgraph: String) {
         self.path_subgraph_map.insert(path, subgraph);
+    }
+
+    pub fn add_permission(&mut self, path: String, pt: PermissionType) {
+        self.path_permission_map.insert(path, pt);
     }
 
     pub fn read(&self, leaf_index: usize, key_string: String) -> String {

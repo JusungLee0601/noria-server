@@ -57,31 +57,17 @@ impl Operator for Leaf {
 
     /// Doesn't apply to the rest of the operators as it is the Leaf
     fn process_change(&mut self, change: Vec<Change>, _dfg: &DataFlowGraph, _parent_index: NodeIndex, _self_index: NodeIndex) { 
+        println!("etneredleaf");
         self.apply(change.clone());  
 
         let server_change = ServerChange::new(self.root_pair_id.clone(), change);
 
         for n in 0..self.sockets.len() {
+            println!("writing");
             let msg = Message::text(serde_json::to_string(&server_change.clone()).unwrap());
             let ws = self.get_ws(n);
             ws.write_message(msg).unwrap();
         }
-    }
-
-    fn initial_connect(&mut self, mut ws: WebSocket<TcpStream>) {
-        //handle ended connection, remove websocket from vec
-        let mut batch = Vec::new();
-
-        for (key, val) in &self.table {
-            batch.push(val.clone());
-        }
-
-        let initial_change = Change::new(ChangeType::Insertion, batch);
-        let init_sc = ServerChange::new(self.root_pair_id.clone(), vec![initial_change]);
-
-        let msg = Message::text(serde_json::to_string(&init_sc).unwrap());
-        ws.write_message(msg).unwrap();
-        self.sockets.push(ws);
     }
 }
 
@@ -95,5 +81,21 @@ impl Leaf {
 
     pub fn get_ws(&mut self, index: usize) -> &mut WebSocket<TcpStream> {
         self.sockets.get_mut(index).unwrap()
+    }
+
+    pub fn initial_connect(&mut self, mut ws: WebSocket<TcpStream>) {
+        //handle ended connection, remove websocket from vec
+        let mut batch = Vec::new();
+
+        for (key, val) in &self.table {
+            batch.push(val.clone());
+        }
+
+        let initial_change = Change::new(ChangeType::Insertion, batch);
+        let init_sc = ServerChange::new(self.root_pair_id.clone(), vec![initial_change]);
+
+        let msg = Message::text(serde_json::to_string(&init_sc).unwrap());
+        ws.write_message(msg).unwrap();
+        self.sockets.push(ws);
     }
 }

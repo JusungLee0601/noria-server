@@ -48,15 +48,4 @@ impl Operator for Operation {
             Operation::InnerJoinor(op) => op.process_change(change, dfg, parent_index, self_index),
         }
     }
-
-    fn initial_connect(&mut self, mut ws: WebSocket<TcpStream>) { 
-        match self {
-            Operation::Selector(op) => op.initial_connect(ws),
-            Operation::Projector(op) => op.initial_connect(ws),
-            Operation::Aggregator(op) => op.initial_connect(ws),
-            Operation::Rootor(op) => op.initial_connect(ws),
-            Operation::Leafor(op) => op.initial_connect(ws),
-            Operation::InnerJoinor(op) => op.initial_connect(ws),
-        }
-    }
 }
