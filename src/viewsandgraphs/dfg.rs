@@ -38,9 +38,7 @@ pub struct DataFlowGraph {
     pub(crate) data: Graph<RwLock<Operation>, ()>,
     root_id_map: HashMap<String, NodeIndex>,
     leaf_id_vec: Vec<NodeIndex>,
-    pub(crate) path_subgraph_map: HashMap<String, String>,
     pub(crate) path_leaf_map: HashMap<String, NodeIndex>,
-    pub(crate) path_permission_map: HashMap<String, PermissionType>,
 }
 
 //Displays DFG
@@ -65,11 +63,10 @@ impl DataFlowGraph {
         let mut data = Graph::new();
         let mut root_id_map = HashMap::new();
         let mut leaf_id_vec = Vec::new();
-        let mut path_subgraph_map = HashMap::new(); 
         let mut path_leaf_map = HashMap::new(); 
-        let mut path_permission_map = HashMap::new();   
+  
 
-        DataFlowGraph { data, root_id_map, leaf_id_vec, path_subgraph_map, path_leaf_map, path_permission_map }
+        DataFlowGraph { data, root_id_map, leaf_id_vec, path_leaf_map }
     }
 
     pub fn change_to_root_json(&self, root_string: String, row_chng_json: String) {
@@ -131,14 +128,6 @@ impl DataFlowGraph {
         let pni = NodeIndex::new(pi);
         let cni = NodeIndex::new(ci);
         self.data.add_edge(pni, cni, {});
-    }
-
-    pub fn add_path(&mut self, path: String, subgraph: String) {
-        self.path_subgraph_map.insert(path, subgraph);
-    }
-
-    pub fn add_permission(&mut self, path: String, pt: PermissionType) {
-        self.path_permission_map.insert(path, pt);
     }
 
     pub fn read(&self, leaf_index: usize, key_string: String) -> String {
