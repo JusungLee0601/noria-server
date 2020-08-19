@@ -40,37 +40,37 @@ use crate::units::change::Change;
 fn build_server_graph() -> DataFlowGraph {
     let mut graph = DataFlowGraph::new();
 
-    // let stories_root = r##"{
-    //     "root_id": "Stories",
-    //     "key_index": 1
-    // }"##;
-    // let votes_root = r##"{
-    //     "root_id": "Votes",
-    //     "key_index": 2
-    // }"##;
-    // let aggregator = r##"{
-    //     "group_by_col": [0]
-    // }"##;
-
-    // graph.add_node(OperatorType::R, stories_root.to_owned());
-    // graph.add_node(OperatorType::R, votes_root.to_owned());
-    // graph.add_node(OperatorType::A, aggregator.to_owned());
-    // graph.add_leaf("JoinLeft".to_owned(), 1);
-    // graph.add_leaf("JoinRight".to_owned(), 0);
-
-    // graph.add_edge(0, 3);
-    // graph.add_edge(1, 2);
-    // graph.add_edge(2, 4);
-
     let stories_root = r##"{
-        "root_id": "OnlyServer",
-        "key_index": 0
+        "root_id": "Stories",
+        "key_index": 1
+    }"##;
+    let votes_root = r##"{
+        "root_id": "Votes",
+        "key_index": 1
+    }"##;
+    let aggregator = r##"{
+        "group_by_col": [0]
     }"##;
 
     graph.add_node(OperatorType::R, stories_root.to_owned());
-    graph.add_leaf("Only".to_owned(), 0, "/dummytest".to_string());
+    graph.add_node(OperatorType::R, votes_root.to_owned());
+    graph.add_node(OperatorType::A, aggregator.to_owned());
+    graph.add_leaf("JoinLeft".to_owned(), 1, "/latencytestleft".to_string());
+    graph.add_leaf("JoinRight".to_owned(), 0, "/latencytestright".to_string());
 
-    graph.add_edge(0, 1);
+    graph.add_edge(0, 3);
+    graph.add_edge(1, 2);
+    graph.add_edge(2, 4);
+
+    // let stories_root = r##"{
+    //     "root_id": "OnlyServer",
+    //     "key_index": 0
+    // }"##;
+
+    // graph.add_node(OperatorType::R, stories_root.to_owned());
+    // graph.add_leaf("Only".to_owned(), 0, "/dummytest".to_string());
+
+    // graph.add_edge(0, 1);
 
     graph
 }
@@ -150,12 +150,15 @@ fn build_server_info() -> ServerInfo {
         }]
     }"##;
 
-    info.add_path("/latencytest".to_owned(), latency_test_subgraph.to_owned());
-    info.add_path("/latencytestdummy".to_owned(), "".to_owned());
+    info.add_path("/latencytestleft".to_owned(), latency_test_subgraph.to_owned());
+    info.add_path("/latencytestright".to_owned(), "".to_owned());
     info.add_path("/dummytest".to_owned(), dummy_test_subgraph.to_owned());
 
     info.add_permission("/dummytest".to_string(), PermissionType::Write);
     info.add_permission("/dummytestread".to_string(), PermissionType::Read);
+    info.add_permission("/latencytestleft".to_string(), PermissionType::Write);
+    info.add_permission("/latencytestright".to_string(), PermissionType::Write);
+    info.add_permission("/latencytestread".to_string(), PermissionType::Read);
 
     info
 }
@@ -226,12 +229,8 @@ fn main() {
                         if msg.is_binary() || msg.is_text() {
                             if let Text(inner_json) = msg {
                                 let mut g = graph_ref.lock().unwrap();
-                                println!("message received");
                                 let sc: ServerChange = serde_json::from_str(&inner_json).unwrap();
-                                println!("message converted");
                                 g.change_to_root(sc.root_id, sc.changes);
-                                println!("root change");
-                                println!("{}", g.render());
                             }
                         }
                     }

@@ -81,7 +81,6 @@ impl DataFlowGraph {
     }
 
     pub fn change_to_root(&self, root_string: String, chng_vec: Vec<Change>) {
-        println!("entered");
         let root_node_index = *(self.root_id_map.get(&root_string).unwrap());
         let mut root_op = self.data.node_weight(root_node_index.clone()).unwrap().write().unwrap();
 

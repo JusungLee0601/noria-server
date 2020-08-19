@@ -57,13 +57,11 @@ impl Operator for Leaf {
 
     /// Doesn't apply to the rest of the operators as it is the Leaf
     fn process_change(&mut self, change: Vec<Change>, _dfg: &DataFlowGraph, _parent_index: NodeIndex, _self_index: NodeIndex) { 
-        println!("etneredleaf");
         self.apply(change.clone());  
 
         let server_change = ServerChange::new(self.root_pair_id.clone(), change);
 
         for n in 0..self.sockets.len() {
-            println!("writing");
             let msg = Message::text(serde_json::to_string(&server_change.clone()).unwrap());
             let ws = self.get_ws(n);
             ws.write_message(msg).unwrap();
