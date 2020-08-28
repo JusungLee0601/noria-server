@@ -1,18 +1,16 @@
 <div align="center">
 
-  <h1><code>snakeriver-clientside</code></h1>
+  <h1><code>snakeriver-server</code></h1>
 
   <strong>Graph Server for the SnakeRiver System</strong>
 
   <h3>
-    <a href="https://rustwasm.github.io/docs/wasm-pack/tutorials/npm-browser-packages/index.html">snakeriver-client</a>
+    <a href="https://github.com/JusungLee0601/snakeriver-clientside">snakeriver-clientside</a>
   <br>
-  <a href="https://rustwasm.github.io/docs/wasm-pack/tutorials/npm-browser-packages/index.html">slide deck</a>
+  <a href="https://docs.google.com/presentation/d/1ODsMf6o6zTsH2Zp_oWeKQSeTu0nmWtI7VzPwBKDrOT4/edit?usp=sharing">slide deck</a>
   <br>
-  <a href="https://rustwasm.github.io/docs/wasm-pack/tutorials/npm-browser-packages/index.html">poster</a>
+  <a href="https://repository.library.brown.edu/studio/item/bdr:1140600/">poster</a>
    <br>
-  <a href="https://rustwasm.github.io/docs/wasm-pack/tutorials/npm-browser-packages/index.html">project template</a>
-  </h3>
 </div>
 
 # Overview 
