@@ -61,10 +61,26 @@ impl Operator for Leaf {
 
         let server_change = ServerChange::new(self.root_pair_id.clone(), change);
 
+        let mut remove_vec = Vec::new();
+
         for n in 0..self.sockets.len() {
             let msg = Message::text(serde_json::to_string(&server_change.clone()).unwrap());
             let ws = self.get_ws(n);
-            ws.write_message(msg).unwrap();
+
+            match ws.write_message(msg) {
+                Ok(message) => (),
+                Err(error) => {
+                    remove_vec.push(n);
+                },
+            };
+        }
+
+        if (!remove_vec.is_empty()) {
+            for index in remove_vec {
+                let ws = self.get_ws(index);
+                ws.close(None);
+                self.sockets.remove(index);
+            }
         }
     }
 }

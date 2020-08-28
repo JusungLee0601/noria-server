@@ -165,6 +165,7 @@ fn build_server_info() -> ServerInfo {
 
 fn main() {
     let graph = Arc::new(Mutex::new(build_server_graph()));
+    let counter = Arc::new(Mutex::new(0));
     //let info = Arc::new(Mutex::new(build_server_info()));
 
     println!("creating websocket");
@@ -174,6 +175,7 @@ fn main() {
     for stream in server.incoming() {
         println!("server loop");
         let graph_ref = Arc::clone(&graph);
+        let counter_ref = Arc::clone(&counter);
         //let info_ref = Arc::clone(&info);
         println!("resources cloned");
 
@@ -188,10 +190,10 @@ fn main() {
                 println!("The request's path is: {}", req.uri().path());
                 path = req.uri().path().to_string();
 
-                println!("The request's headers are:");
-                for (ref header, _value) in req.headers() {
-                    println!("* {}", header);
-                }
+                // println!("The request's headers are:");
+                // for (ref header, _value) in req.headers() {
+                //     println!("* {}", header);
+                // }
 
                 // Let's add an additional header to our response to the client.
                 let headers = response.headers_mut();
@@ -204,8 +206,6 @@ fn main() {
             let info = build_server_info();
             let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
             let permission = info.path_permission_map.get(&path).unwrap();
-
-            println!("{}", path);
             
             match permission {
                 PermissionType::Write => {
@@ -224,13 +224,40 @@ fn main() {
                     }
                 },
                 PermissionType::Read => {
+                    {
+                        let mut c = counter_ref.lock().unwrap();
+                        *c += 1; 
+                    }
+
                     loop {
-                        let msg = websocket.read_message().unwrap();
-                        if msg.is_binary() || msg.is_text() {
-                            if let Text(inner_json) = msg {
-                                let mut g = graph_ref.lock().unwrap();
-                                let sc: ServerChange = serde_json::from_str(&inner_json).unwrap();
-                                g.change_to_root(sc.root_id, sc.changes);
+                        let mut c = counter_ref.lock().unwrap();
+
+                        if (*c >= 6) {
+                            break;
+                        }
+                    }
+
+                    println!("limit break!");
+
+                    let msg = Message::text(serde_json::to_string("").unwrap());
+                    websocket.write_message(msg).unwrap();
+
+                    loop {
+                        let msg = websocket.read_message();
+
+                        match msg {
+                            Err(err) => {
+                                websocket.close(None);
+                                break;
+                            }
+                            Ok(message) => {
+                                if message.is_binary() || message.is_text() {
+                                    if let Text(inner_json) = message {
+                                        let mut g = graph_ref.lock().unwrap();
+                                        let sc: ServerChange = serde_json::from_str(&inner_json).unwrap();
+                                        g.change_to_root(sc.root_id, sc.changes);
+                                    }
+                                }
                             }
                         }
                     }
