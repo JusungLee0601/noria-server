@@ -38,7 +38,7 @@ In root directory to start up server:
 cargo run
 ```
 
-# Key Takeaways
+# Project Writeup
 
-## System Design
+## Client vs Server Testing
 
